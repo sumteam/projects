@@ -7,7 +7,7 @@ A real-time cryptocurrency dashboard powered by **sumtyme.ai** CIL (Causal Intel
 - **Real-time Market Data**: Live candlestick data from Binance WebSocket feeds
 - **AI-Powered Predictions**: Integration with sumtyme.ai's API for causal chain analysis
 - **Multi-Timeframe Analysis**: Track 1m, 3m, 5m, and 15m intervals simultaneously
-- **Trend Propagation Tracking**: Visual indicators showing how trends propagate across timeframes
+- **Propagation Tracking**: Visual indicators showing how directional changes propagate across timeframes for real-time foresight
 - **Quad View Mode**: Monitor up to 4 different cryptocurrencies at once
 - **Historical Performance**: Toggle between normal and 5x historical data modes
 - **Custom Timeframes**: Set any valid Binance timeframe for analysis
