@@ -46,15 +46,12 @@ Works on desktop devices
 
 ```bash
 git clone https://github.com/yourusername/sumtyme-trading-dashboard.git
-cd sumtyme-trading-dashboard
+cd sumtyme-dashboard
 ```
 
 ### 2. Backend Setup
 
 ```bash
-# Navigate to backend directory (if separate)
-cd backend
-
 # Create virtual environment
 python -m venv venv # or python3 -m venv venv if on macOS
 
@@ -80,7 +77,7 @@ eip_client = EIPClient(apikey='YOUR_SUMTYME_API_KEY_HERE')
 
 ```bash
 # Navigate to frontend directory
-cd frontend  # or stay in root if using root-level package.json
+cd frontend  # or stay in root if using root-level package.json (if you kept the file structure the same)
 
 # Install dependencies
 npm install
@@ -88,7 +85,7 @@ npm install
 yarn install
 ```
 
-**Configure Environment Variables:**
+**Configure Environment Variables:** 
 
 Create a `.env` file in the frontend directory:
 
@@ -165,7 +162,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 ### 2. Start the Frontend Development Server
 
 ```bash
-# From frontend directory
+# From frontend directory (or root)
 npm run dev
 # or
 yarn dev
