@@ -56,7 +56,7 @@ cd sumtyme-trading-dashboard
 cd backend
 
 # Create virtual environment
-python -m venv venv
+python -m venv venv # or python3 -m venv venv if on macOS
 
 # Activate virtual environment
 # On Windows:
