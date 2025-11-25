@@ -43,7 +43,7 @@ def initialize_client():
         try:
             # Initialize client with API key
             print(inspect.signature(EIPClient))
-            eip_client = EIPClient(apikey='stai-Zsw4H8YTuRI9ce4JED7dmz5AH4KMOuzZACv_HPqVNP8S')
+            eip_client = EIPClient(apikey='your-api-key-here')
             logger.info("EIP Client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize EIP Client: {e}")
