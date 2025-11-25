@@ -45,7 +45,7 @@ Works on desktop devices
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/sumteam/projects/main/ui-web-app-2
+git clone https://github.com/sumteam/projects.git
 cd ui-web-app-2
 ```
 
