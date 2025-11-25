@@ -66,9 +66,6 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Install sumtyme package
-pip install sumtyme
 ```
 
 **Configure Sumtyme API Key:**
