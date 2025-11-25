@@ -37,7 +37,7 @@ Works on desktop devices
 
 ### Backend
 - Python 3.8+
-- Sumtyme.ai API key (get from [sumtyme.ai](https://sumtyme.ai))
+- Sumtyme.ai API key (get from [sumtyme.ai](https://docs.sumtyme.ai))
 - pip package manager
 
 ## Installation
@@ -45,16 +45,13 @@ Works on desktop devices
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/sumtyme-trading-dashboard.git
-cd sumtyme-trading-dashboard
+git clone https://github.com/sumteam/projects/main/ui-web-app-2
+cd ui-web-app-2
 ```
 
 ### 2. Backend Setup
 
 ```bash
-# Navigate to backend directory (if separate)
-cd backend
-
 # Create virtual environment
 python -m venv venv
 
@@ -77,61 +74,6 @@ Edit `sumtyme_server.py` and replace the API key:
 
 ```python
 eip_client = EIPClient(apikey='YOUR_SUMTYME_API_KEY_HERE')
-```
-
-### 3. Frontend Setup
-
-```bash
-# Navigate to frontend directory
-cd frontend  # or stay in root if using root-level package.json
-
-# Install dependencies
-npm install
-# or
-yarn install
-```
-
-**Configure Environment Variables:**
-
-Create a `.env` file in the frontend directory:
-
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Backend API URL
-VITE_SUMTYME_API_URL=http://localhost:8000
-```
-
-### 4. Supabase Database Setup
-
-Create a `predictions` table in your Supabase project:
-
-```sql
-CREATE TABLE predictions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  timeframe TEXT NOT NULL,
-  datetime TEXT NOT NULL,
-  value INTEGER NOT NULL,
-  ticker TEXT NOT NULL DEFAULT 'BTCUSDT',
-  timeframe_label TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  UNIQUE(timeframe, datetime, ticker)
-);
-
--- Create index for faster queries
-CREATE INDEX idx_predictions_timeframe_ticker ON predictions(timeframe, ticker);
-CREATE INDEX idx_predictions_datetime ON predictions(datetime);
-CREATE INDEX idx_predictions_created_at ON predictions(created_at DESC);
-
--- Enable Row Level Security (optional but recommended)
-ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
-
--- Create policy to allow all operations (adjust based on your needs)
-CREATE POLICY "Enable all operations for predictions" ON predictions
-  FOR ALL USING (true) WITH CHECK (true);
 ```
 
 ## Running the Application
@@ -168,10 +110,10 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 ### 2. Start the Frontend Development Server
 
 ```bash
-# From frontend directory
+# In second command prompt/terminal window
+cd ui-web-app-2
+npm install
 npm run dev
-# or
-yarn dev
 ```
 
 The frontend will start on `http://localhost:5173` (or similar)
@@ -214,8 +156,6 @@ The system tracks how directional changes propagate from higher to lower frequen
 Edit `sumtyme_server.py` to modify:
 
 ```python
-# Data requirements (see Implementation Guide for more information)
-MIN_DATA_LENGTH = 5001  # 5000 historical + 1 forecast placeholder. Don't change.
 
 # Reasoning mode (options: 'proactive', 'reactive')
 REASONING_MODE = 'proactive'
