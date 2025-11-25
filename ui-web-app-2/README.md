@@ -36,7 +36,7 @@ Works on desktop devices
 - A Supabase account (free tier works)
 
 ### Backend
-- Python 3.8+
+- Python 3.9+
 - Sumtyme.ai API key (get from [sumtyme.ai](https://docs.sumtyme.ai))
 - pip package manager
 
