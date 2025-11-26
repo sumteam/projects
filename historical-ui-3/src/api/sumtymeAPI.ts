@@ -1,10 +1,15 @@
 import { PredictionEntry } from '../types';
 import {
   subscribeToPredictionUpdates as subscribeToService,
-  getCurrentPredictions as getCurrentFromService
+  getCurrentPredictions as getCurrentFromService,
+  getAvailableTimeframes as getAvailableTimeframesFromService
 } from '../services/predictionService';
 
 export const SUPPORTED_PREDICTION_INTERVALS = ['1m', '3m', '5m', '15m'];
+
+export const getAvailableTimeframes = (ticker: string): string[] => {
+  return getAvailableTimeframesFromService(ticker);
+};
 
 type ViewUpdateCallback = () => void;
 const viewUpdateCallbacks: ViewUpdateCallback[] = [];

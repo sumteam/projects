@@ -138,16 +138,6 @@ const Dashboard: React.FC = () => {
                         <span>Info</span>
                     </button>
 
-                    <button
-                        onClick={toggleHistoricalPerformance}
-                        className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors ${showHistoricalPerformance
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'bg-[#2a2a2a] text-[#999] hover:bg-[#3a3a3a] hover:text-white'
-                            }`}
-                    >
-                        <BarChart3 size={12} />
-                        <span>Extended</span>
-                    </button>
 
                     <button
                         onClick={() => setShowQuadView(prev => !prev)}
@@ -206,7 +196,8 @@ const Dashboard: React.FC = () => {
                                 <ul className="list-disc list-inside space-y-1 text-sm">
                                     <li><strong>Required columns:</strong> datetime, open, high, low, close</li>
                                     <li><strong>Datetime formats:</strong> YYYY-MM-DD HH:mm:ss, DD-MM-YYYY HH:mm:ss, MM-DD-YYYY HH:mm:ss, DD/MM/YYYY HH:mm:ss, or MM/DD/YYYY HH:mm:ss</li>
-                                    <li><strong>Optional prediction columns:</strong> trend_identified_1m, trend_identified_3m, trend_identified_5m, trend_identified_15m</li>
+                                    <li><strong>Optional prediction columns:</strong> chain_detected_{'{'}number{'}{'}unit{'}'} where unit is s (seconds), m (minutes), or h (hours)</li>
+                                    <li><strong>Examples:</strong> chain_detected_30s, chain_detected_1m, chain_detected_5m, chain_detected_15m, chain_detected_1h</li>
                                     <li><strong>Prediction values:</strong> -1 (negative), 0 (neutral), or 1 (positive)</li>
                                 </ul>
                             </div>
@@ -216,7 +207,6 @@ const Dashboard: React.FC = () => {
                                 <ol className="list-decimal list-inside space-y-1 text-sm">
                                     <li>Click "Upload CSV" to select and upload your CSV file</li>
                                     <li>Use "Files" button to manage and switch between uploaded files</li>
-                                    <li>Toggle "Extended" to view more historical data</li>
                                     <li>Enable "Quad View" to compare multiple CSV files side-by-side</li>
                                     <li>Turn on "All Insights" to see all prediction points instead of just signal changes</li>
                                 </ol>

@@ -89,6 +89,7 @@ export interface PredictionArrowProps {
     position: { x: number; y: number };
     timeframeId: string;
     ticker: string;
+    timeframesAtSameTime?: string[];
 }
 
 export interface ConnectionStatusProps {

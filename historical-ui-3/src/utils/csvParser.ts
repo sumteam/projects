@@ -1,5 +1,10 @@
 import { CandlestickData, PredictionEntry } from '../types';
 
+export const isValidTimeframeFormat = (timeframe: string): boolean => {
+  const timeframePattern = /^\d+[smh]$/;
+  return timeframePattern.test(timeframe);
+};
+
 export interface ParsedCSVRow {
   datetime: Date;
   open: number;
@@ -198,11 +203,29 @@ export function parseCSVText(text: string): CSVParseResult {
     const closeIdx = headers.indexOf('close');
 
     const predictionColumns: { index: number; timeframe: string }[] = [];
+    const invalidTimeframes: string[] = [];
+    const chainDetectedHeaders: string[] = [];
+
     headers.forEach((header, idx) => {
-      if (header.startsWith('trend_identified_')) {
-        const timeframe = header.replace('trend_identified_', '');
-        predictionColumns.push({ index: idx, timeframe });
+      if (header.startsWith('chain_detected_')) {
+        chainDetectedHeaders.push(header);
+        const timeframe = header.replace('chain_detected_', '');
+
+        if (isValidTimeframeFormat(timeframe)) {
+          predictionColumns.push({ index: idx, timeframe });
+        } else {
+          invalidTimeframes.push(timeframe);
+          console.warn(`[CSV Parser] Invalid timeframe format: "${timeframe}" - must be {number}{s|m|h}`);
+        }
       }
+    });
+
+    console.log('[CSV Parser] Detected columns:', {
+      totalHeaders: headers.length,
+      allHeaders: headers,
+      chainDetectedHeaders,
+      predictionColumns: predictionColumns.map(pc => ({ timeframe: pc.timeframe, index: pc.index })),
+      invalidTimeframes: invalidTimeframes.length > 0 ? invalidTimeframes : 'none'
     });
 
     const availableTimeframes = predictionColumns.map(pc => pc.timeframe);
@@ -330,6 +353,11 @@ export function convertToChartData(parsedData: ParsedCSVRow[]): CandlestickData[
 export function extractPredictions(parsedData: ParsedCSVRow[], fileId: string): Map<string, PredictionEntry[]> {
   const predictionMap = new Map<string, PredictionEntry[]>();
 
+  console.log('[CSV Parser] Extracting predictions from', parsedData.length, 'rows for file:', fileId);
+
+  let totalPredictions = 0;
+  let nonZeroPredictions = 0;
+
   for (const row of parsedData) {
     for (const [timeframe, value] of Object.entries(row.predictions)) {
       if (!predictionMap.has(timeframe)) {
@@ -344,8 +372,23 @@ export function extractPredictions(parsedData: ParsedCSVRow[], fileId: string): 
         timeframeId: timeframe,
         ticker: fileId
       });
+
+      totalPredictions++;
+      if (value !== 0) nonZeroPredictions++;
     }
   }
+
+  console.log('[CSV Parser] Extracted predictions:', {
+    totalPredictions,
+    nonZeroPredictions,
+    timeframes: Array.from(predictionMap.keys()),
+    sampleByTimeframe: Array.from(predictionMap.entries()).map(([tf, preds]) => ({
+      timeframe: tf,
+      total: preds.length,
+      nonZero: preds.filter(p => p.value !== 0).length,
+      sample: preds.slice(0, 2)
+    }))
+  });
 
   return predictionMap;
 }

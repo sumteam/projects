@@ -9,16 +9,31 @@ const getTimeframeLabel = (timeframeId: string): string => {
     return timeframe?.label || timeframeId;
 };
 
-const PredictionArrow: React.FC<PredictionArrowProps> = ({ value, position, timeframeId, ticker }) => {
+// Convert timeframe ID to seconds
+const timeframeToSeconds = (timeframeId: string): number => {
+    const match = timeframeId.match(/^(\d+)([smhdw])$/);
+    if (!match) return 0;
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+        case 's': return value;
+        case 'm': return value * 60;
+        case 'h': return value * 3600;
+        case 'd': return value * 86400;
+        case 'w': return value * 604800;
+        default: return 0;
+    }
+};
+
+const PredictionArrow: React.FC<PredictionArrowProps> = ({ value, position, timeframeId, ticker, timeframesAtSameTime }) => {
     const [showTooltip, setShowTooltip] = useState(false);
 
     // Don't render anything if value is 0 (no prediction)
     if (value === 0 || value === null || value === undefined) {
         return null;
     }
-
-    // Debug log to see what values we're getting
-    console.log('PredictionArrow rendering:', { value, position, timeframeId, ticker });
 
     // Determine if prediction is bullish (positive value) or bearish (negative value)
     const isUp = value > 0;
@@ -61,18 +76,32 @@ const PredictionArrow: React.FC<PredictionArrowProps> = ({ value, position, time
         border: `1px solid ${color}`,
     };
 
-    // Calculate vertical offset based on timeframe to stack labels at different heights
-    const getTimeframeOffset = (timeframeId: string): number => {
-        switch (timeframeId) {
-            case '1m': return 12;  // Closest to dot
-            case '3m': return 20;  // 8px higher
-            case '5m': return 28;  // 16px higher
-            case '15m': return 36; // 24px higher
-            default: return 12;    // Default position
+    // Calculate vertical offset based on timeframe frequency ranking (only if multiple at same time)
+    const getTimeframeOffset = (timeframeId: string, timeframesAtSameTime: string[]): number => {
+        // Base offset for all labels
+        const baseOffset = 12;
+
+        // If no other timeframes at the same time, or only one timeframe, use base offset
+        if (!timeframesAtSameTime || timeframesAtSameTime.length <= 1) {
+            return baseOffset;
         }
+
+        // Convert all timeframes to seconds and sort by frequency (lowest seconds = highest frequency)
+        const sortedTimeframes = [...timeframesAtSameTime]
+            .map(tf => ({ id: tf, seconds: timeframeToSeconds(tf) }))
+            .sort((a, b) => a.seconds - b.seconds);
+
+        // Find the rank of current timeframe (0 = highest frequency)
+        const rank = sortedTimeframes.findIndex(tf => tf.id === timeframeId);
+
+        // If not found, use default offset
+        if (rank === -1) return baseOffset;
+
+        // Add 10px for each rank (0px for highest frequency, 10px for next, 20px for next, etc.)
+        return baseOffset + (rank * 10);
     };
 
-    const timeframeOffset = getTimeframeOffset(timeframeId);
+    const timeframeOffset = getTimeframeOffset(timeframeId, timeframesAtSameTime || []);
 
     const labelStyle: React.CSSProperties = {
         position: 'absolute',

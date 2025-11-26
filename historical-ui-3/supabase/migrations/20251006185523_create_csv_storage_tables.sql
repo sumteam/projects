@@ -10,7 +10,7 @@
       - `datetime_format` (text) - Detected datetime format (YYYY-MM-DD, DD-MM-YYYY, or MM-DD-YYYY)
       - `start_date` (timestamptz) - Earliest datetime in the CSV data
       - `end_date` (timestamptz) - Latest datetime in the CSV data
-      - `available_timeframes` (text[]) - Array of timeframe identifiers found in trend columns
+      - `available_timeframes` (text[]) - Array of timeframe identifiers found in chain detection columns
       - `uploaded_at` (timestamptz) - When the file was uploaded
       - `created_at` (timestamptz) - Record creation timestamp
       - `updated_at` (timestamptz) - Record update timestamp
@@ -23,7 +23,7 @@
       - `high` (numeric) - High price
       - `low` (numeric) - Low price
       - `close` (numeric) - Close price
-      - `predictions` (jsonb) - JSON object containing trend_identified values keyed by timeframe
+      - `predictions` (jsonb) - JSON object containing chain_detected values keyed by timeframe
       - `created_at` (timestamptz) - Record creation timestamp
 
     - `analysis_sessions`

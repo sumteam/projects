@@ -146,8 +146,9 @@ const CSVUpload: React.FC<CSVUploadProps> = ({ onUploadComplete, onClose }) => {
             <ul className="text-[#ccc] text-sm space-y-1 list-disc list-inside">
               <li>Required columns: datetime, open, high, low, close</li>
               <li>Datetime formats: YYYY-MM-DD HH:mm:ss, DD-MM-YYYY HH:mm:ss, MM-DD-YYYY HH:mm:ss, DD/MM/YYYY HH:mm:ss, or MM/DD/YYYY HH:mm:ss</li>
-              <li>Optional: trend_identified_1m, trend_identified_3m, trend_identified_5m, trend_identified_15m columns</li>
-              <li>Trend values should be -1, 0, or 1</li>
+              <li>Optional: chain_detected_{'{'}number{'}{'}unit{'}'} columns (e.g., chain_detected_30s, chain_detected_1m, chain_detected_1h)</li>
+              <li>Supported units: s (seconds), m (minutes), h (hours)</li>
+              <li>Chain detection values should be -1, 0, or 1</li>
             </ul>
           </div>
 

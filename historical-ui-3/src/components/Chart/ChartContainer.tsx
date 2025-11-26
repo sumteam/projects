@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createChart, IChartApi, ISeriesApi } from 'lightweight-charts';
 import { CandlestickData, ChartContainerProps, PredictionEntry, ArrowPosition } from '../../types';
 import { fetchKlineData, subscribeToUpdates, getCurrentData, parseAndValidateTimeframeInput, calculateDataLimit } from '../../api/binanceAPI';
-import { subscribeToPredictionUpdates, getCurrentPredictions, subscribeToViewUpdates, SUPPORTED_PREDICTION_INTERVALS } from '../../api/sumtymeAPI';
+import { subscribeToPredictionUpdates, getCurrentPredictions, subscribeToViewUpdates, getAvailableTimeframes } from '../../api/sumtymeAPI';
 import PredictionArrow from './PredictionArrow';
 
 const formatDateTime = (timestamp: number): string => {
@@ -300,7 +300,8 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
         const predictionsByTimeframe: Record<string, PredictionEntry[]> = {};
 
         // Include predictions from all timeframes, including those with value 0
-        SUPPORTED_PREDICTION_INTERVALS.forEach(interval => {
+        const availableTimeframes = getAvailableTimeframes(symbol);
+        availableTimeframes.forEach(interval => {
             const intervalPredictions = getCurrentPredictions(interval, showHistoricalPerformance, symbol);
             // Get ALL predictions including 0s from the service
             predictionsByTimeframe[interval] = intervalPredictions.sort((a, b) =>
@@ -393,40 +394,100 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
     };
 
     const calculateArrowPositions = (): ArrowPosition[] => {
-        if (!chartRef.current || !seriesRef.current || !chartContainerRef.current || currentData.length === 0) return [];
+        if (!chartRef.current || !seriesRef.current || !chartContainerRef.current || currentData.length === 0) {
+            console.log('[ChartContainer] calculateArrowPositions early return:', {
+                hasChart: !!chartRef.current,
+                hasSeries: !!seriesRef.current,
+                hasContainer: !!chartContainerRef.current,
+                dataLength: currentData.length
+            });
+            return [];
+        }
 
         const totalWidth = chartContainerRef.current.clientWidth;
         const rightPriceScale = chartRef.current.priceScale('right');
         const priceScaleWidth = rightPriceScale.width();
         const maxX = totalWidth - priceScaleWidth - 9;
 
-        // Filter predictions to show only signal changes
-        const predictionsToShow = showAllInsights
-            ? predictions.filter(prediction => prediction.value !== 0 && prediction.ticker === symbol)
-            : filterSignalChanges(
-                predictions.filter(prediction => prediction.value !== 0 && prediction.ticker === symbol)
-            );
+        const filteredPredictions = predictions.filter(prediction => prediction.value !== 0 && prediction.ticker === symbol);
 
-        // Get change ending periods
+        console.log('[ChartContainer] calculateArrowPositions:', {
+            totalPredictions: predictions.length,
+            symbol,
+            filteredCount: filteredPredictions.length,
+            showAllInsights,
+            currentDataRange: currentData.length > 0 ? {
+                first: currentData[0].time,
+                last: currentData[currentData.length - 1].time,
+                count: currentData.length
+            } : null
+        });
+
+        const predictionsToShow = showAllInsights
+            ? filteredPredictions
+            : filterSignalChanges(filteredPredictions);
+
+        console.log('[ChartContainer] predictionsToShow after filtering:', predictionsToShow.length);
+
         const changeEndings = detectChangeEndings(predictions);
 
         const arrowPositions: ArrowPosition[] = [];
 
-        // Add signal change predictions
-        predictionsToShow.forEach(prediction => {
-            const timestamp = parseDateTime(prediction.datetime);
-            const alignedTimestamp = getAlignedTimestamp(timestamp, timeframe.binanceInterval);
-            const candlestick = currentData.find(d => d.time === alignedTimestamp);
+        let matchedCount = 0;
+        let unmatchedCount = 0;
+        let outOfBoundsCount = 0;
 
-            if (!candlestick) return;
+        predictionsToShow.forEach((prediction, index) => {
+            const timestamp = parseDateTime(prediction.datetime);
+
+            let candlestick = currentData.find(d => d.time === timestamp);
+            let matchedTimestamp = timestamp;
+
+            if (!candlestick) {
+                const candleTimes = currentData.map(d => d.time);
+                const closestIndex = candleTimes.reduce((closest, time, index) => {
+                    const currentDiff = Math.abs(time - timestamp);
+                    const closestDiff = Math.abs(candleTimes[closest] - timestamp);
+                    return currentDiff < closestDiff ? index : closest;
+                }, 0);
+
+                const timeDiff = Math.abs(candleTimes[closestIndex] - timestamp);
+
+                if (index < 3) {
+                    console.log(`[ChartContainer] Prediction ${index} matching:`, {
+                        prediction,
+                        timestamp,
+                        closestCandleTime: candleTimes[closestIndex],
+                        timeDiff,
+                        willMatch: timeDiff <= 300
+                    });
+                }
+
+                if (timeDiff <= 300) {
+                    candlestick = currentData[closestIndex];
+                    matchedTimestamp = candleTimes[closestIndex];
+                }
+            }
+
+            if (!candlestick) {
+                unmatchedCount++;
+                return;
+            }
 
             const coordinate = seriesRef.current!.priceToCoordinate(candlestick.open);
             const timeScale = chartRef.current!.timeScale();
-            const timeCoordinate = timeScale.timeToCoordinate(alignedTimestamp);
+            const timeCoordinate = timeScale.timeToCoordinate(matchedTimestamp);
 
-            if (coordinate === null || timeCoordinate === null) return;
+            if (coordinate === null || timeCoordinate === null) {
+                return;
+            }
 
-            if (timeCoordinate >= maxX || timeCoordinate < 0) return;
+            if (timeCoordinate >= maxX || timeCoordinate < 0) {
+                outOfBoundsCount++;
+                return;
+            }
+
+            matchedCount++;
 
             arrowPositions.push({
                 x: timeCoordinate,
@@ -439,18 +500,41 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
             });
         });
 
-        // Add change ending labels
+        console.log('[ChartContainer] Arrow position results:', {
+            predictionsToShow: predictionsToShow.length,
+            matchedCount,
+            unmatchedCount,
+            outOfBoundsCount,
+            finalArrowPositions: arrowPositions.length,
+            samplePositions: arrowPositions.slice(0, 3)
+        });
+
         if (!showAllInsights) {
             changeEndings.forEach(ending => {
                 const timestamp = parseDateTime(ending.datetime);
-                const alignedTimestamp = getAlignedTimestamp(timestamp, timeframe.binanceInterval);
-                const candlestick = currentData.find(d => d.time === alignedTimestamp);
+
+                let candlestick = currentData.find(d => d.time === timestamp);
+                let matchedTimestamp = timestamp;
+
+                if (!candlestick) {
+                    const candleTimes = currentData.map(d => d.time);
+                    const closestIndex = candleTimes.reduce((closest, time, index) => {
+                        const currentDiff = Math.abs(time - timestamp);
+                        const closestDiff = Math.abs(candleTimes[closest] - timestamp);
+                        return currentDiff < closestDiff ? index : closest;
+                    }, 0);
+
+                    if (Math.abs(candleTimes[closestIndex] - timestamp) <= 300) {
+                        candlestick = currentData[closestIndex];
+                        matchedTimestamp = candleTimes[closestIndex];
+                    }
+                }
 
                 if (!candlestick) return;
 
                 const coordinate = seriesRef.current!.priceToCoordinate(candlestick.open);
                 const timeScale = chartRef.current!.timeScale();
-                const timeCoordinate = timeScale.timeToCoordinate(alignedTimestamp);
+                const timeCoordinate = timeScale.timeToCoordinate(matchedTimestamp);
 
                 if (coordinate === null || timeCoordinate === null) return;
 
@@ -459,7 +543,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
                 arrowPositions.push({
                     x: timeCoordinate,
                     y: coordinate,
-                    value: 0, // Special value for change ending
+                    value: 0,
                     datetime: ending.datetime,
                     timeframeId: ending.timeframeId,
                     ticker: symbol,
@@ -468,6 +552,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
                 });
             });
         }
+
         return arrowPositions;
     };
 
@@ -650,10 +735,26 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
                 // Update predictions based on whether the current timeframe supports predictions
                 const allPredictions: PredictionEntry[] = [];
-                SUPPORTED_PREDICTION_INTERVALS.forEach(interval => {
+                const availableTimeframes = getAvailableTimeframes(symbol);
+                availableTimeframes.forEach(interval => {
                     const intervalPredictions = getCurrentPredictions(interval, showHistoricalPerformance, symbol);
                     allPredictions.push(...intervalPredictions);
                 });
+
+                console.log('[ChartContainer] Initial predictions loaded:', {
+                    symbol,
+                    timeframe: timeframe.binanceInterval,
+                    availableTimeframes,
+                    totalPredictions: allPredictions.length,
+                    nonZero: allPredictions.filter(p => p.value !== 0).length,
+                    byTimeframe: availableTimeframes.map(interval => ({
+                        interval,
+                        count: allPredictions.filter(p => p.timeframeId === interval).length,
+                        nonZero: allPredictions.filter(p => p.timeframeId === interval && p.value !== 0).length
+                    })),
+                    sample: allPredictions.filter(p => p.value !== 0).slice(0, 3)
+                });
+
                 setPredictions(allPredictions);
 
                 setViewUpdateTrigger(prev => prev + 1);
@@ -680,7 +781,8 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
                 // Update predictions based on whether the current timeframe supports predictions
                 const allPredictions: PredictionEntry[] = [];
-                SUPPORTED_PREDICTION_INTERVALS.forEach(interval => {
+                const availableTimeframes = getAvailableTimeframes(symbol);
+                availableTimeframes.forEach(interval => {
                     const intervalPredictions = getCurrentPredictions(interval, showHistoricalPerformance, symbol);
                     allPredictions.push(...intervalPredictions);
                 });
@@ -691,11 +793,12 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
         });
 
         const unsubscribePredictions = subscribeToPredictionUpdates((newPredictions, updatedTimeframeId, ticker) => {
-            if (SUPPORTED_PREDICTION_INTERVALS.includes(updatedTimeframeId) && ticker === symbol) {
+            const availableTimeframes = getAvailableTimeframes(symbol);
+            if (availableTimeframes.includes(updatedTimeframeId) && ticker === symbol) {
                 // Use setTimeout to debounce and let chart data update first
                 setTimeout(() => {
                     const allPredictions: PredictionEntry[] = [];
-                    SUPPORTED_PREDICTION_INTERVALS.forEach(interval => {
+                    availableTimeframes.forEach(interval => {
                         const intervalPredictions = getCurrentPredictions(interval, showHistoricalPerformance, symbol);
                         allPredictions.push(...intervalPredictions);
                     });
@@ -720,7 +823,8 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
     // Update predictions when showHistoricalPerformance changes
     useEffect(() => {
         const allPredictions: PredictionEntry[] = [];
-        SUPPORTED_PREDICTION_INTERVALS.forEach(interval => {
+        const availableTimeframes = getAvailableTimeframes(symbol);
+        availableTimeframes.forEach(interval => {
             const intervalPredictions = getCurrentPredictions(interval, showHistoricalPerformance, symbol);
             allPredictions.push(...intervalPredictions);
         });
@@ -773,44 +877,66 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
                 {/* Overlay container - managed by React for PredictionArrows */}
                 <div ref={overlayContainerRef} className="absolute inset-0 p-0.5 pointer-events-none">
-                    {arrowPositions.map((position) => (
-                        position.isChangeEnding ? (
-                            // Change ending label
-                            <div
-                                key={`ending-${position.datetime}-${position.ticker}-${position.timeframeId}`}
-                                style={{
-                                    position: 'absolute',
-                                    left: `${position.x + 1}px`,
-                                    top: `${position.y - 20}px`,
-                                    transform: 'translate(-50%, -100%)',
-                                    color: '#999',
-                                    fontSize: '8px',
-                                    fontWeight: 'bold',
-                                    textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
-                                    zIndex: 3,
-                                    pointerEvents: 'none',
-                                    fontFamily: 'monospace',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                    padding: '2px 4px',
-                                    borderRadius: '2px',
-                                    border: '1px solid #555',
-                                    whiteSpace: 'nowrap'
-                                }}
-                                title={`Change ending period: ${position.datetime} to ${position.endTime}`}
-                            >
-                                change ending ({position.timeframeId})
-                            </div>
-                        ) : (
-                            // Regular prediction arrow
-                            <PredictionArrow
-                                key={`${position.datetime}-${position.ticker}-${position.timeframeId}`}
-                                value={position.value}
-                                position={position}
-                                timeframeId={position.timeframeId}
-                                ticker={position.ticker}
-                            />
-                        )
-                    ))}
+                    {(() => {
+                        // Group arrow positions by datetime to identify overlapping timeframes
+                        const positionsByDatetime = new Map<string, ArrowPosition[]>();
+                        arrowPositions.forEach(pos => {
+                            if (!pos.isChangeEnding) {
+                                const key = `${pos.datetime}-${pos.ticker}`;
+                                if (!positionsByDatetime.has(key)) {
+                                    positionsByDatetime.set(key, []);
+                                }
+                                positionsByDatetime.get(key)!.push(pos);
+                            }
+                        });
+
+                        return arrowPositions.map((position) => {
+                            if (position.isChangeEnding) {
+                                // Change ending label
+                                return (
+                                    <div
+                                        key={`ending-${position.datetime}-${position.ticker}-${position.timeframeId}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${position.x + 1}px`,
+                                            top: `${position.y - 20}px`,
+                                            transform: 'translate(-50%, -100%)',
+                                            color: '#999',
+                                            fontSize: '8px',
+                                            fontWeight: 'bold',
+                                            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+                                            zIndex: 3,
+                                            pointerEvents: 'none',
+                                            fontFamily: 'monospace',
+                                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                            padding: '2px 4px',
+                                            borderRadius: '2px',
+                                            border: '1px solid #555',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={`Change ending period: ${position.datetime} to ${position.endTime}`}
+                                    >
+                                        change ending ({position.timeframeId})
+                                    </div>
+                                );
+                            } else {
+                                // Regular prediction arrow
+                                const key = `${position.datetime}-${position.ticker}`;
+                                const timeframesAtSameTime = positionsByDatetime.get(key)?.map(p => p.timeframeId) || [];
+
+                                return (
+                                    <PredictionArrow
+                                        key={`${position.datetime}-${position.ticker}-${position.timeframeId}`}
+                                        value={position.value}
+                                        position={position}
+                                        timeframeId={position.timeframeId}
+                                        ticker={position.ticker}
+                                        timeframesAtSameTime={timeframesAtSameTime}
+                                    />
+                                );
+                            }
+                        });
+                    })()}
                 </div>
             </div>
         </div>
