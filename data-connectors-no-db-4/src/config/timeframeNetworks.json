@@ -1,0 +1,73 @@
+{
+  "networks": {
+    "stocks": [
+      {
+        "seconds": 1,
+        "label": "1s",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 5,
+        "label": "5s",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 15,
+        "label": "15s",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 30,
+        "label": "30s",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 60,
+        "label": "1m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 300,
+        "label": "5m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 900,
+        "label": "15m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 3600,
+        "label": "1h",
+        "bufferSize": 5000
+      }
+    ],
+    "weather": [
+      {
+        "seconds": 60,
+        "label": "1m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 300,
+        "label": "5m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 900,
+        "label": "15m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 1800,
+        "label": "30m",
+        "bufferSize": 5000
+      },
+      {
+        "seconds": 3600,
+        "label": "1h",
+        "bufferSize": 5000
+      }
+    ]
+  }
+}

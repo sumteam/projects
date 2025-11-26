@@ -1,0 +1,35 @@
+{
+  "polygon": {
+    "apiKey": "YOUR_POLYGON_API_KEY",
+    "wsUrl": "wss://socket.polygon.io/stocks",
+    "symbols": ["AAPL", "TSLA", "MSFT"],
+    "enableBackfill": true
+  },
+  "accuweather": {
+    "apiKey": "YOUR_ACCUWEATHER_API_KEY",
+    "locationKey": "349727",
+    "pollingIntervalMs": 300000,
+    "baseUrl": "http://dataservice.accuweather.com"
+  },
+  "bloomberg": {
+    "host": "127.0.0.1",
+    "port": 8194,
+    "securities": ["AAPL US Equity", "MSFT US Equity", "TSLA US Equity"],
+    "fields": ["LAST_TRADE", "BID", "ASK", "VOLUME", "LAST_PRICE"],
+    "serviceName": "//blp/mktdata"
+  },
+  "binance": {
+    "baseUrl": "wss://stream.binance.com:9443",
+    "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+    "streams": ["trade", "aggTrade"]
+  },
+  "cil": {
+    "apiUrl": "https://api.sumtyme.ai/cil/analyze",
+    "apiKey": "YOUR_CIL_API_KEY",
+    "rowCount": 5001
+  },
+  "supabase": {
+    "url": "YOUR_SUPABASE_URL",
+    "anonKey": "YOUR_SUPABASE_ANON_KEY"
+  }
+}
