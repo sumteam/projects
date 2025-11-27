@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import ChartContainer from '../Chart/ChartContainer';
 import QuadView from './QuadView';
 import CSVUpload from '../CSVUpload/CSVUpload';
@@ -9,6 +9,7 @@ import { TimeframeConfig, PredictionEntry } from '../../types';
 import { SUPPORTED_PREDICTION_INTERVALS } from '../../api/sumtymeAPI';
 import { Info, X, BarChart3, Upload, FolderOpen, Grid3x3 as Grid3X3, File } from 'lucide-react';
 import { getCSVMetadata, getAllLoadedFiles, loadCSVFile } from '../../services/csvService';
+import { extractTrendIndicators } from '../../utils/indicatorAnalysis';
 
 const Dashboard: React.FC = () => {
     const [currentFileId, setCurrentFileId] = useState<string>('');
@@ -110,6 +111,13 @@ const Dashboard: React.FC = () => {
 
     const currentMetadata = currentFileId ? getCSVMetadata(currentFileId) : null;
 
+    const { initialIndicators, propagations } = useMemo(() => {
+        if (!currentFileId || !allPredictionsData[currentFileId]) {
+            return { initialIndicators: [], propagations: [] };
+        }
+        return extractTrendIndicators(allPredictionsData[currentFileId]);
+    }, [currentFileId, allPredictionsData]);
+
     return (
         <div className="h-screen flex flex-col bg-[#1a1a1a]">
             <div className="flex items-center justify-between bg-[#1a1a1a] border-b border-[#2a2a2a] px-2 py-0.5 md:px-4 md:py-1">
@@ -175,7 +183,7 @@ const Dashboard: React.FC = () => {
 
             {showInfoModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg max-w-5xl w-full max-h-[80vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-4 border-b border-[#2a2a2a]">
                             <h2 className="text-white text-lg font-semibold">CSV Visualization Tool</h2>
                             <button
@@ -188,15 +196,95 @@ const Dashboard: React.FC = () => {
 
                         <div className="p-6 space-y-4 text-[#ccc] leading-relaxed">
                             <p className="text-white font-medium">
-                                This tool visualizes historical cryptocurrency data from CSV files with trend predictions.
+                                This tool visualizes historical cryptocurrency data from CSV files with forecasts from sumtyme.ai's Causal Intelligence Layer.
                             </p>
+
+                            {currentFileId && (
+                                <>
+                                    <div className="pt-4 border-t border-[#2a2a2a]">
+                                        <h3 className="text-white font-medium mb-3">Initial Indicators</h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse">
+                                                <thead>
+                                                    <tr className="bg-[#2a2a2a]">
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Datetime</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Value</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Timeframe</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">End Datetime</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {initialIndicators.length > 0 ? initialIndicators.map((ind, idx) => (
+                                                        <tr key={idx} className="hover:bg-[#2a2a2a]">
+                                                            <td className="border border-[#3a3a3a] px-2 py-1 font-mono">{ind.datetime}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">
+                                                                <span className={ind.trend_type > 0 ? 'text-green-500' : 'text-red-500'}>
+                                                                    {ind.trend_type > 0 ? '↑' : '↓'} {ind.trend_type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">{ind.timeframe}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1 font-mono">{ind.end_datetime || 'N/A'}</td>
+                                                        </tr>
+                                                    )) : (
+                                                        <tr>
+                                                            <td colSpan={4} className="border border-[#3a3a3a] px-2 py-3 text-center text-[#666]">
+                                                                No initial indicators found
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-[#2a2a2a]">
+                                        <h3 className="text-white font-medium mb-3">Propagations</h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse">
+                                                <thead>
+                                                    <tr className="bg-[#2a2a2a]">
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Prop ID</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Level</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Datetime</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Value</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Higher Freq</th>
+                                                        <th className="border border-[#3a3a3a] px-2 py-1 text-left text-white">Lower Freq</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {propagations.length > 0 ? propagations.map((prop, idx) => (
+                                                        <tr key={idx} className="hover:bg-[#2a2a2a]">
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">{prop.propagation_id}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">{prop.propagation_level}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1 font-mono">{prop.datetime}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">
+                                                                <span className={prop.trend_type > 0 ? 'text-green-500' : 'text-red-500'}>
+                                                                    {prop.trend_type > 0 ? '↑' : '↓'} {prop.trend_type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">{prop.higher_freq}</td>
+                                                            <td className="border border-[#3a3a3a] px-2 py-1">{prop.lower_freq}</td>
+                                                        </tr>
+                                                    )) : (
+                                                        <tr>
+                                                            <td colSpan={6} className="border border-[#3a3a3a] px-2 py-3 text-center text-[#666]">
+                                                                No propagations found
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="pt-4 border-t border-[#2a2a2a]">
                                 <h3 className="text-white font-medium mb-2">CSV Format Requirements</h3>
                                 <ul className="list-disc list-inside space-y-1 text-sm">
                                     <li><strong>Required columns:</strong> datetime, open, high, low, close</li>
                                     <li><strong>Datetime formats:</strong> YYYY-MM-DD HH:mm:ss, DD-MM-YYYY HH:mm:ss, MM-DD-YYYY HH:mm:ss, DD/MM/YYYY HH:mm:ss, or MM/DD/YYYY HH:mm:ss</li>
-                                    <li><strong>Optional prediction columns:</strong> chain_detected_{'{'}number{'}{'}unit{'}'} where unit is s (seconds), m (minutes), or h (hours)</li>
+                                    <li><strong>Additional columns:</strong> chain_detected_{'{'}number{'}{'}unit{'}'} where unit is s (seconds), m (minutes), or h (hours)</li>
                                     <li><strong>Examples:</strong> chain_detected_30s, chain_detected_1m, chain_detected_5m, chain_detected_15m, chain_detected_1h</li>
                                     <li><strong>Prediction values:</strong> -1 (negative), 0 (neutral), or 1 (positive)</li>
                                 </ul>
@@ -208,15 +296,15 @@ const Dashboard: React.FC = () => {
                                     <li>Click "Upload CSV" to select and upload your CSV file</li>
                                     <li>Use "Files" button to manage and switch between uploaded files</li>
                                     <li>Enable "Quad View" to compare multiple CSV files side-by-side</li>
-                                    <li>Turn on "All Insights" to see all prediction points instead of just signal changes</li>
+                                    <li>Turn on "All Insights" to see all prediction points instead of just propagations</li>
                                 </ol>
                             </div>
 
                             <div className="pt-4 border-t border-[#2a2a2a]">
                                 <h3 className="text-white font-medium mb-2">Visualization</h3>
                                 <p className="text-sm">
-                                    The chart displays the open price as a line. Green dots represent positive trend predictions,
-                                    while red dots represent negative predictions. Predictions are plotted at the open price of
+                                    The chart displays the open price as a line. Green dots represent positive causal chain insights,
+                                    while red dots represent negative causal chain insights. Predictions are plotted at the open price of
                                     the corresponding candle.
                                 </p>
                             </div>
