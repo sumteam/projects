@@ -356,7 +356,7 @@ Example:
 * They can help you understand how large the directional change will be
 * They allow you to build real-world decision systems
 
-Through propagation analysis, you can build algorithms that enable:
+By taking time to understand these propagations, you can build algorithms that enable:
 
 * Automatic risk management
 * Early-warning systems
